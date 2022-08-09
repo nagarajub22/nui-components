@@ -3,6 +3,14 @@
   "compileOnSave": false,
   "compilerOptions": {
     "baseUrl": "./",
+    "paths": {
+      "@nui/components": [
+        "projects/components/",
+        "projects/components/src/public-api.ts",
+        "dist/components/components",
+        "dist/components"
+      ]
+    },
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
     "strict": true,
