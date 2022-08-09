@@ -1,0 +1,12 @@
+<div class="wrapper">
+  <div class="box">
+      <div nuiDrag [ngClass]="{'animate': showAnimation}">Drag Me</div>
+  </div>
+  <br/>
+  <div class="box box-small">
+      <div nuiDrag>Drag Me</div>
+  </div>
+
+  <button (click)="showAnimation = !showAnimation">Toggle Animation</button>
+
+</div>
