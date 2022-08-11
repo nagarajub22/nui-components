@@ -1,16 +1,16 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DragDirective } from './drag.directive';
+import { NUIDragDirective } from './drag.directive';
 
 @NgModule({
   declarations: [
-    DragDirective
+    NUIDragDirective
   ],
   imports: [
     CommonModule
   ],
   exports: [
-    DragDirective
+    NUIDragDirective
   ]
 })
-export class DragAndDropModule { }
+export class NUIDragAndDropModule { }
