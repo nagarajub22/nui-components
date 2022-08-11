@@ -1,33 +1,58 @@
 import { DOCUMENT } from '@angular/common';
 import { Directive, ElementRef, EventEmitter, Inject, Input, NgZone, OnDestroy, OnInit, Output } from '@angular/core';
-import { Subject, takeUntil, tap } from 'rxjs';
-import { fromEvent } from 'rxjs';
+import { fromEvent, Subject, takeUntil, tap } from 'rxjs';
 
-export interface IDOMRect {
+export interface NUIDOMRect {
   x: number;
   y: number;
   width?: number;
   height?: number;
 }
-
-export interface IPageCoord {
-  x: number;
-  y: number;
+export interface NUIBoundaryRect {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
 }
+
+
+export const NUI_DRAG_ELEMENT_ACTIVE = 'nui-drag-active';
 
 @Directive({
   selector: '[nuiDrag]'
 })
-export class DragDirective implements OnInit, OnDestroy {
+export class NUIDragDirective implements OnInit, OnDestroy {
 
-  @Input() dragBoundary!: HTMLElement;
+  /**
+   * Input bindings
+   */
+  @Input('nuiDragBoundary') dragBoundary: HTMLElement;
+
+
+  /**
+   * Output Emitters
+   */
   @Output() dragEnd: EventEmitter<MouseEvent> = new EventEmitter();
 
-  private dragElLastPosition!: IDOMRect;
-
+  /** 
+   * Private Variables 
+  */
+  
   private get dragEl(): HTMLElement {
     return this.el.nativeElement;
   }
+
+  private dragLastPickupPoint: NUIDOMRect;
+  private dragLastTransform: NUIDOMRect = {
+    x: 0,
+    y: 0
+  };
+  private dragBoundaryRect:NUIBoundaryRect = {
+    left: -Infinity,
+    top: -Infinity,
+    right: Infinity,
+    bottom: Infinity
+  };
 
   private isDragInitiated = false;
   private destroy$ = new Subject();
@@ -52,14 +77,13 @@ export class DragDirective implements OnInit, OnDestroy {
 
 
   // private methods
-
-  private init() {
+  private init(): void {
     this.ngZone.runOutsideAngular(() => {
       this.attachListeners();
     });
   }
 
-  private attachListeners() {
+  private attachListeners(): void {
     fromEvent<MouseEvent>(this.el.nativeElement, 'mousedown')
       .pipe(takeUntil(this.destroy$))
       .subscribe(evt => {
@@ -68,7 +92,7 @@ export class DragDirective implements OnInit, OnDestroy {
       });
   }
 
-  private initializeDragging() {
+  private initializeDragging(): void {
     const upEvent = fromEvent<MouseEvent>(this.document, 'mouseup')
       .pipe(
         takeUntil(this.destroy$),
@@ -85,65 +109,61 @@ export class DragDirective implements OnInit, OnDestroy {
 
   }
 
-  private onPointerDown(evt: MouseEvent) {
+  private onPointerDown(evt: MouseEvent): void {
     this.isDragInitiated = true;
-    this.dragElLastPosition = { x: evt.pageX, y: evt.pageY };
+    this.dragLastPickupPoint = { x: evt.pageX, y: evt.pageY };
+    this.setDragBoundary();
+    this.setDragStyles();
   }
 
-  private onPointerMove(evt: MouseEvent) {
+  private onPointerMove(evt: MouseEvent): void {
     if (this.isDragInitiated) {
       this.moveElement(evt);
     }
   }
 
-  private onPointerUp(evt: MouseEvent) {
+  private onPointerUp(evt: MouseEvent): void {
     this.ngZone.run(() => {
       this.isDragInitiated = false;
-      this.removeMoveStyle();
+      this.removeDragStyles();
       this.dragEnd.emit(evt);
     });
   }
 
-  private moveElement(evt: MouseEvent) {
+  private moveElement(evt: MouseEvent): void {
     if (this.isDragInitiated) {
 
-      const lastKnownDistance = this.getAttributeXY(this.el.nativeElement);
-
-      console.log((evt.pageX - this.dragElLastPosition.x));
-
       const newDistance = {
-        x: lastKnownDistance.x + (evt.pageX - this.dragElLastPosition.x), 
-        y: lastKnownDistance.y + (evt.pageY - this.dragElLastPosition.y) 
+        x: this.dragLastTransform.x + (evt.pageX - this.dragLastPickupPoint.x), 
+        y: this.dragLastTransform.y + (evt.pageY - this.dragLastPickupPoint.y) 
       };
 
-      this.dragElLastPosition = { x: evt.pageX, y: evt.pageY };
-      this.setAttributeXY(this.el.nativeElement, newDistance);
+      this.dragLastPickupPoint = { x: evt.pageX, y: evt.pageY };
+      this.dragLastTransform = newDistance;
 
       this.dragEl.style.transform = `translate3d(${newDistance.x}px, ${newDistance.y}px, 0px)`;
-      this.setStyleOnMove();
     }
   }
 
-  private setStyleOnMove() {
-    this.dragEl.style.setProperty('user-select', 'none');
-  }
-
-  private removeMoveStyle() {
-    this.dragEl.style.removeProperty('user-select');
-  }
-
-  private setAttributeXY(element: HTMLElement, position: IDOMRect) {
-    if(element) {
-      element.setAttribute('x', position.x.toString());
-      element.setAttribute('y', position.y.toString());
+  private setDragBoundary(): void {
+    if(this.dragBoundary) {
+      const boundaryRect = this.dragBoundary.getBoundingClientRect();
+      this.dragBoundaryRect = {
+        left: boundaryRect.x,
+        top: boundaryRect.y,
+        right: boundaryRect.x + boundaryRect.width,
+        bottom: boundaryRect.y + boundaryRect.height
+      };
+      console.log(this.dragBoundaryRect);
     }
   }
 
-  private getAttributeXY(element: HTMLElement): IDOMRect {
-    return {
-      x: parseInt(element.getAttribute('x') || '0', 10),
-      y: parseInt(element.getAttribute('y') || '0', 10)
-    }
+  private setDragStyles(): void {
+    this.dragEl.classList.add(NUI_DRAG_ELEMENT_ACTIVE);
+  }
+
+  private removeDragStyles(): void {
+    this.dragEl.classList.remove(NUI_DRAG_ELEMENT_ACTIVE);
   }
 
 }

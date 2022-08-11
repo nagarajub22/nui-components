@@ -1,6 +1,6 @@
 <div class="wrapper">
-  <div class="box">
-      <div nuiDrag [ngClass]="{'animate': showAnimation}">Drag Me</div>
+  <div class="box" #box>
+      <div nuiDrag [nuiDragBoundary]="box">Drag Me</div>
   </div>
   <br/>
   <div class="box box-small">
