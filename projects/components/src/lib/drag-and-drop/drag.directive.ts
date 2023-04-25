@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Directive, ElementRef, EventEmitter, Inject, Input, NgZone, OnDestroy, OnInit, Output } from '@angular/core';
 import { fromEvent, Subject, takeUntil, tap } from 'rxjs';
+import { clamp } from '../utils/math.util';
 
 export interface NUIDOMRect {
   x: number;
@@ -37,7 +38,7 @@ export class NUIDragDirective implements OnInit, OnDestroy {
   /** 
    * Private Variables 
   */
-  
+
   private get dragEl(): HTMLElement {
     return this.el.nativeElement;
   }
@@ -47,7 +48,9 @@ export class NUIDragDirective implements OnInit, OnDestroy {
     x: 0,
     y: 0
   };
-  private dragBoundaryRect:NUIBoundaryRect = {
+  private dragElRect: NUIDOMRect;
+  private dragElParentDistance: NUIDOMRect;
+  private dragBoundaryRect: NUIBoundaryRect = {
     left: -Infinity,
     top: -Infinity,
     right: Infinity,
@@ -79,6 +82,12 @@ export class NUIDragDirective implements OnInit, OnDestroy {
   // private methods
   private init(): void {
     this.ngZone.runOutsideAngular(() => {
+      this.dragElRect = this.dragEl.getBoundingClientRect();
+      this.setDragBoundary();
+      this.dragElParentDistance = {
+        x: this.dragBoundaryRect.left - this.dragElRect.x,
+        y: this.dragBoundaryRect.top - this.dragElRect.y
+      };
       this.attachListeners();
     });
   }
@@ -112,7 +121,6 @@ export class NUIDragDirective implements OnInit, OnDestroy {
   private onPointerDown(evt: MouseEvent): void {
     this.isDragInitiated = true;
     this.dragLastPickupPoint = { x: evt.pageX, y: evt.pageY };
-    this.setDragBoundary();
     this.setDragStyles();
   }
 
@@ -132,21 +140,28 @@ export class NUIDragDirective implements OnInit, OnDestroy {
 
   private moveElement(evt: MouseEvent): void {
     if (this.isDragInitiated) {
-
       const newDistance = {
-        x: this.dragLastTransform.x + (evt.pageX - this.dragLastPickupPoint.x), 
-        y: this.dragLastTransform.y + (evt.pageY - this.dragLastPickupPoint.y) 
+        x: this.dragLastTransform.x + (evt.pageX - this.dragLastPickupPoint.x),
+        y: this.dragLastTransform.y + (evt.pageY - this.dragLastPickupPoint.y)
       };
 
-      this.dragLastPickupPoint = { x: evt.pageX, y: evt.pageY };
-      this.dragLastTransform = newDistance;
+      const left = this.dragElParentDistance.x,
+        right = this.dragBoundaryRect.right - this.dragElRect.x - this.dragElRect.width,
+        top = this.dragElParentDistance.y,
+        bottom = this.dragBoundaryRect.bottom - this.dragElRect.y - this.dragElRect.height;
 
-      this.dragEl.style.transform = `translate3d(${newDistance.x}px, ${newDistance.y}px, 0px)`;
+        this.dragLastPickupPoint = { x: evt.pageX, y: evt.pageY };
+        this.dragLastTransform = newDistance;
+
+        this.dragEl.style.transform = `translate3d(
+          ${clamp(newDistance.x, left, right)}px, 
+          ${clamp(newDistance.y, top, bottom)}px, 0px
+        )`;
     }
   }
 
   private setDragBoundary(): void {
-    if(this.dragBoundary) {
+    if (this.dragBoundary) {
       const boundaryRect = this.dragBoundary.getBoundingClientRect();
       this.dragBoundaryRect = {
         left: boundaryRect.x,
@@ -154,7 +169,6 @@ export class NUIDragDirective implements OnInit, OnDestroy {
         right: boundaryRect.x + boundaryRect.width,
         bottom: boundaryRect.y + boundaryRect.height
       };
-      console.log(this.dragBoundaryRect);
     }
   }
 
