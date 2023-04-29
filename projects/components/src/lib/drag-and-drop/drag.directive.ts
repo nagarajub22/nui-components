@@ -3,21 +3,12 @@ import { Directive, ElementRef, EventEmitter, Inject, Input, NgZone, OnDestroy, 
 import { fromEvent, Subject, takeUntil, tap } from 'rxjs';
 import { clamp } from '../utils/math.util';
 
-export interface NUIDOMRect {
+export const NUI_DRAG_ELEMENT_ACTIVE = 'nui-drag-active';
+
+export interface DOMPosition {
   x: number;
   y: number;
-  width?: number;
-  height?: number;
 }
-export interface NUIBoundaryRect {
-  left: number;
-  top: number;
-  right: number;
-  bottom: number;
-}
-
-
-export const NUI_DRAG_ELEMENT_ACTIVE = 'nui-drag-active';
 
 @Directive({
   selector: '[nuiDrag]'
@@ -27,7 +18,7 @@ export class NUIDragDirective implements OnInit, OnDestroy {
   /**
    * Input bindings
    */
-  @Input('nuiDragBoundary') dragBoundary: HTMLElement;
+  @Input('nuiDragBoundary') boundaryEl: HTMLElement;
 
 
   /**
@@ -38,23 +29,16 @@ export class NUIDragDirective implements OnInit, OnDestroy {
   /** 
    * Private Variables 
   */
-
   private get dragEl(): HTMLElement {
     return this.el.nativeElement;
   }
 
-  private dragLastPickupPoint: NUIDOMRect;
-  private dragLastTransform: NUIDOMRect = {
+  private boundaryRect: DOMRect;
+  private pickupPoint: DOMPosition;
+  private offsetPoint: DOMPosition;
+  private lastTransform: DOMPosition = {
     x: 0,
     y: 0
-  };
-  private dragElRect: NUIDOMRect;
-  private dragElParentDistance: NUIDOMRect;
-  private dragBoundaryRect: NUIBoundaryRect = {
-    left: -Infinity,
-    top: -Infinity,
-    right: Infinity,
-    bottom: Infinity
   };
 
   private isDragInitiated = false;
@@ -82,12 +66,6 @@ export class NUIDragDirective implements OnInit, OnDestroy {
   // private methods
   private init(): void {
     this.ngZone.runOutsideAngular(() => {
-      this.dragElRect = this.dragEl.getBoundingClientRect();
-      this.setDragBoundary();
-      this.dragElParentDistance = {
-        x: this.dragBoundaryRect.left - this.dragElRect.x,
-        y: this.dragBoundaryRect.top - this.dragElRect.y
-      };
       this.attachListeners();
     });
   }
@@ -120,7 +98,15 @@ export class NUIDragDirective implements OnInit, OnDestroy {
 
   private onPointerDown(evt: MouseEvent): void {
     this.isDragInitiated = true;
-    this.dragLastPickupPoint = { x: evt.pageX, y: evt.pageY };
+    this.pickupPoint = {
+      x: evt.pageX,
+      y: evt.pageY
+    };
+    this.offsetPoint = {
+      x: evt.offsetX,
+      y: evt.offsetY
+    };
+    this.setBoundaryRect();
     this.setDragStyles();
   }
 
@@ -140,35 +126,47 @@ export class NUIDragDirective implements OnInit, OnDestroy {
 
   private moveElement(evt: MouseEvent): void {
     if (this.isDragInitiated) {
-      const newDistance = {
-        x: this.dragLastTransform.x + (evt.pageX - this.dragLastPickupPoint.x),
-        y: this.dragLastTransform.y + (evt.pageY - this.dragLastPickupPoint.y)
+
+      let x = evt.pageX, y = evt.pageY;
+
+      const dragEl = {
+        left: (x - this.offsetPoint.x),
+        top: (y - this.offsetPoint.y),
+        right: (x - this.offsetPoint.x) + this.dragEl.offsetWidth,
+        bottom: (y - this.offsetPoint.y) + this.dragEl.offsetHeight
       };
 
-      const left = this.dragElParentDistance.x,
-        right = this.dragBoundaryRect.right - this.dragElRect.x - this.dragElRect.width,
-        top = this.dragElParentDistance.y,
-        bottom = this.dragBoundaryRect.bottom - this.dragElRect.y - this.dragElRect.height;
+      if(this.boundaryEl) {
+        if (dragEl.left < this.boundaryRect.left) {
+          x = this.boundaryRect.left + this.offsetPoint.x;
+        } else if (dragEl.right > this.boundaryRect.right) {
+          x = this.boundaryRect.right - this.dragEl.offsetWidth + this.offsetPoint.x;
+        }
+  
+        if (dragEl.top < this.boundaryRect.top) {
+          y = this.boundaryRect.top + this.offsetPoint.y;
+        } else if (dragEl.bottom > this.boundaryRect.bottom) {
+          y = this.boundaryRect.bottom - this.dragEl.offsetHeight + this.offsetPoint.y;
+        }
+      }
 
-        this.dragLastPickupPoint = { x: evt.pageX, y: evt.pageY };
-        this.dragLastTransform = newDistance;
+      const newX = this.lastTransform.x + (x - this.pickupPoint.x);
+      const newY = this.lastTransform.y + (y - this.pickupPoint.y);
 
-        this.dragEl.style.transform = `translate3d(
-          ${clamp(newDistance.x, left, right)}px, 
-          ${clamp(newDistance.y, top, bottom)}px, 0px
-        )`;
+      this.pickupPoint = { x: x, y: y };
+      this.lastTransform = { x: newX, y: newY };
+
+      this.dragEl.style.transform = `translate3d(
+        ${newX}px,
+        ${newY}px,
+        0
+      )`;
     }
   }
 
-  private setDragBoundary(): void {
-    if (this.dragBoundary) {
-      const boundaryRect = this.dragBoundary.getBoundingClientRect();
-      this.dragBoundaryRect = {
-        left: boundaryRect.x,
-        top: boundaryRect.y,
-        right: boundaryRect.x + boundaryRect.width,
-        bottom: boundaryRect.y + boundaryRect.height
-      };
+  private setBoundaryRect() {
+    if (this.boundaryEl) {
+      this.boundaryRect = this.boundaryEl.getBoundingClientRect()
     }
   }
 

@@ -50,12 +50,16 @@ p {
   height: 100px;
   text-align: center;
   line-height: 100px;
-  border: 1px solid #dcdcdc;
+  border: 1px solid #ffa8a8;
   background-color: white;
   transition: box-shadow 50ms cubic-bezier(0, 0, 0.2, 1);
 }
 
 .nui-drag-active {
   user-select: none;
-  box-shadow: 0px 9px 19px -10px #bcbcbc;
+  box-shadow: 0px 9px 19px -10px #ffa8a8;
+}
+
+.box {
+  background-color: red;
 }
