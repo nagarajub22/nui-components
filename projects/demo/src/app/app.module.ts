@@ -1,6 +1,6 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { ComponentsModule, DragAndDropModule } from '@nui/components';
+import { NUIDragAndDropModule } from '@nui/components';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -12,8 +12,7 @@ import { AppComponent } from './app.component';
   imports: [
     BrowserModule,
     AppRoutingModule,
-    ComponentsModule,
-    DragAndDropModule
+    NUIDragAndDropModule
   ],
   providers: [],
   bootstrap: [AppComponent]

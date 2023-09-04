@@ -6,14 +6,15 @@
     "paths": {
       "@nui/components": [
         "projects/components/",
-        "projects/components/src/public-api.ts",
-        "dist/components/components",
-        "dist/components"
+        "projects/components/src/public-api.ts"
       ]
     },
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
-    "strict": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "noImplicitReturns": true,
