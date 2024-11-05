@@ -1,7 +1,6 @@
 import { DOCUMENT } from '@angular/common';
 import { Directive, ElementRef, EventEmitter, Inject, Input, NgZone, OnDestroy, OnInit, Output } from '@angular/core';
 import { fromEvent, Subject, takeUntil, tap } from 'rxjs';
-import { clamp } from '../utils/math.util';
 
 export const NUI_DRAG_ELEMENT_ACTIVE = 'nui-drag-active';
 
@@ -36,6 +35,7 @@ export class NUIDragDirective implements OnInit, OnDestroy {
   private boundaryRect: DOMRect;
   private pickupPoint: DOMPosition;
   private offsetPoint: DOMPosition;
+  private dragElDimension: Pick<DOMRect, "width" | "height">;
   private lastTransform: DOMPosition = {
     x: 0,
     y: 0
@@ -98,6 +98,10 @@ export class NUIDragDirective implements OnInit, OnDestroy {
 
   private onPointerDown(evt: MouseEvent): void {
     this.isDragInitiated = true;
+    this.dragElDimension = {
+      width: this.dragEl.offsetWidth,
+      height: this.dragEl.offsetHeight
+    };
     this.pickupPoint = {
       x: evt.pageX,
       y: evt.pageY
@@ -132,21 +136,21 @@ export class NUIDragDirective implements OnInit, OnDestroy {
       const dragEl = {
         left: (x - this.offsetPoint.x),
         top: (y - this.offsetPoint.y),
-        right: (x - this.offsetPoint.x) + this.dragEl.offsetWidth,
-        bottom: (y - this.offsetPoint.y) + this.dragEl.offsetHeight
+        right: (x - this.offsetPoint.x) + this.dragElDimension.width,
+        bottom: (y - this.offsetPoint.y) + this.dragElDimension.height
       };
 
-      if(this.boundaryEl) {
+      if (this.boundaryEl) {
         if (dragEl.left < this.boundaryRect.left) {
           x = this.boundaryRect.left + this.offsetPoint.x;
         } else if (dragEl.right > this.boundaryRect.right) {
-          x = this.boundaryRect.right - this.dragEl.offsetWidth + this.offsetPoint.x;
+          x = this.boundaryRect.right - this.dragElDimension.width + this.offsetPoint.x;
         }
-  
+
         if (dragEl.top < this.boundaryRect.top) {
           y = this.boundaryRect.top + this.offsetPoint.y;
         } else if (dragEl.bottom > this.boundaryRect.bottom) {
-          y = this.boundaryRect.bottom - this.dragEl.offsetHeight + this.offsetPoint.y;
+          y = this.boundaryRect.bottom - this.dragElDimension.height + this.offsetPoint.y;
         }
       }
 
@@ -166,15 +170,23 @@ export class NUIDragDirective implements OnInit, OnDestroy {
 
   private setBoundaryRect() {
     if (this.boundaryEl) {
-      this.boundaryRect = this.boundaryEl.getBoundingClientRect()
+      const boundaryRect = this.boundaryEl.getBoundingClientRect()
+      this.boundaryRect = {
+        left: Math.ceil(boundaryRect.left),
+        right: Math.ceil(boundaryRect.right),
+        top: Math.ceil(boundaryRect.top),
+        bottom: Math.ceil(boundaryRect.bottom)
+      } as DOMRect;
     }
   }
 
   private setDragStyles(): void {
+    this.document.body.classList.add('nui-dragging-start');
     this.dragEl.classList.add(NUI_DRAG_ELEMENT_ACTIVE);
   }
 
   private removeDragStyles(): void {
+    this.document.body.classList.remove('nui-dragging-start');
     this.dragEl.classList.remove(NUI_DRAG_ELEMENT_ACTIVE);
   }
 
